@@ -80,6 +80,27 @@ High-level phases. Detailed roadmap lives in [`docs/roadmap.md`](docs/roadmap.md
 
 ## Progress Checklist
 
+### AI-200 13-Week Roadmap
+
+Week-by-week plan for the AI-200 milestone. See [`labs/`](labs/) for the
+matching lab write-ups and [`notes/`](notes/) for the weekly notes.
+
+| Week | Learning path | Service focus | Status |
+| ---- | ------------- | ------------- | ------ |
+| 1 | Implement container application hosting | Azure Container Registry | Done |
+| 2 | Implement container application hosting | App Service (containers) | Pending |
+| 3 | Deploy and manage apps on Azure Container Apps | Container Apps | Pending |
+| 4 | Deploy and manage apps on Azure Container Apps | KEDA scaling | Pending |
+| 5 | Deploy and monitor applications on AKS | AKS | Pending |
+| 6 | Develop AI solutions with Cosmos DB for NoSQL | Cosmos DB | Pending |
+| 7 | Develop AI solutions with Azure Database for PostgreSQL | PostgreSQL | Pending |
+| 8 | Develop AI solutions with Azure Database for PostgreSQL | pgvector / RAG | Pending |
+| 9 | Enhance AI solutions with Azure Managed Redis | Redis | Pending |
+| 10 | Integrate backend services for AI solutions | Service Bus, Event Grid | Pending |
+| 11 | Integrate backend services for AI solutions | Azure Functions | Pending |
+| 12 | Manage secrets & config + Observe and troubleshoot | Key Vault, App Config, OTel, KQL | Pending |
+| 13 | End-to-end wiring and review | Capstone review | Pending |
+
 ### Labs
 
 - [ ] 01 — AI Foundry
