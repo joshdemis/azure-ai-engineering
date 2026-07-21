@@ -16,21 +16,43 @@ The real subscription ID is never committed. See
 
 ## Region
 
-Standard region for all 13 weeks: `northeurope`.
+Standard region for all 13 weeks: `swedencentral`.
 
-The resource group was first created in `westeurope`. Creating the container
-registry there failed with `RequestDisallowedByAzure`: the region is not
-currently accepting new customers (https://aka.ms/locationineligible). The
-resource group was recreated in `northeurope`, the nearest viable region to
-Rotterdam, and that is now the default for every resource in this roadmap. Full
-error detail is logged in [`troubleshooting.md`](troubleshooting.md).
+Region history (three moves before landing on the standard):
+
+1. `westeurope`. First choice. Creating the container registry there failed with
+   `RequestDisallowedByAzure`: the region is not currently accepting new
+   customers (https://aka.ms/locationineligible).
+2. `northeurope`. The resource group was recreated here, the nearest viable
+   region to Rotterdam. ACR worked. Later, App Service plan creation failed here
+   with zero App Service VM quota (`Total Regional VMs: 0`), and the quota was
+   regional and tier-independent, so B1 failed identically to F1.
+3. `swedencentral`. App Service plan creation succeeded. This is now the default
+   for every resource in this roadmap, and ACR was migrated here. Full error
+   detail for each move is logged in [`troubleshooting.md`](troubleshooting.md).
+
+### Pre-flight quota check
+
+Run before any compute-provisioning week (3, 4, 5) to confirm the region has
+allocatable VM quota before creating a plan:
+
+```bash
+az vm list-usage --location swedencentral \
+  --query "[?contains(localName,'Total Regional')].{Name:localName,Used:currentValue,Limit:limit}" \
+  -o table
+```
+
+Quota increases are requested via Subscription > Usage + quotas > Request
+increase. On Pay-As-You-Go they are usually auto-approved and cost nothing. Quota
+is permission to allocate, not allocation, so raising it does not itself create or
+bill for anything.
 
 ## Resource group
 
 | Field | Value |
 | ----- | ----- |
 | Name | `rg-ai200-dev` |
-| Region | `northeurope` |
+| Region | `swedencentral` |
 
 ## Standard tags
 

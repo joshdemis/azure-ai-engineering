@@ -14,6 +14,7 @@ If any of the three is unclear, the resource is not created yet.
 | Service | Free Tier | Running Cost | Usage Cost | Delete After Lab |
 | ------- | --------- | ------------ | ---------- | ---------------- |
 | Azure Container Registry (Basic) | No | Yes (~$5/mo) | ACR Tasks compute, negligible | No, keep through Week 5, delete, recreate Week 13 |
+| App Service plan | Yes (F1, unusable for containers) | Yes, B1 ~$13/mo (~$0.018/hr) | No | Yes, always, same day |
 
 ## Pricing accuracy
 

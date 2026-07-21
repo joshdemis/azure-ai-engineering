@@ -25,8 +25,9 @@ Develop containerized solutions on Azure (20-25%).
 
 ## Outcome
 
-- Resource group `rg-ai200-dev` and registry `acrai200dev` created in
-  `northeurope`.
+- Resource group `rg-ai200-dev` and registry `acrai200dev`, later migrated to
+  `swedencentral` (the roadmap standard region, see
+  [`../../docs/environment.md`](../../docs/environment.md)).
 - Registry secured with `adminUserEnabled: false` and
   `anonymousPullEnabled: false`.
 - `retrieval-api` image built in the cloud with `az acr build`, no local Docker.
