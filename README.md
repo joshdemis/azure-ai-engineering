@@ -80,26 +80,35 @@ High-level phases. Detailed roadmap lives in [`docs/roadmap.md`](docs/roadmap.md
 
 ## Progress Checklist
 
-### AI-200 13-Week Roadmap
+### AI-200 13-week roadmap
 
 Week-by-week plan for the AI-200 milestone. See [`labs/`](labs/) for the
-matching lab write-ups and [`notes/`](notes/) for the weekly notes.
+matching lab write-ups and [`notes/`](notes/) for the weekly notes. Full version
+with notes and the path-to-week mapping lives in [`docs/roadmap.md`](docs/roadmap.md).
 
-| Week | Learning path | Service focus | Status |
-| ---- | ------------- | ------------- | ------ |
-| 1 | Implement container application hosting | Azure Container Registry | Done |
-| 2 | Implement container application hosting | App Service (containers) | Pending |
-| 3 | Deploy and manage apps on Azure Container Apps | Container Apps | Pending |
-| 4 | Deploy and manage apps on Azure Container Apps | KEDA scaling | Pending |
-| 5 | Deploy and monitor applications on AKS | AKS | Pending |
-| 6 | Develop AI solutions with Cosmos DB for NoSQL | Cosmos DB | Pending |
-| 7 | Develop AI solutions with Azure Database for PostgreSQL | PostgreSQL | Pending |
-| 8 | Develop AI solutions with Azure Database for PostgreSQL | pgvector / RAG | Pending |
-| 9 | Enhance AI solutions with Azure Managed Redis | Redis | Pending |
-| 10 | Integrate backend services for AI solutions | Service Bus, Event Grid | Pending |
-| 11 | Integrate backend services for AI solutions | Azure Functions | Pending |
-| 12 | Manage secrets & config + Observe and troubleshoot | Key Vault, App Config, OTel, KQL | Pending |
-| 13 | End-to-end wiring and review | Capstone review | Pending |
+**Plan structure:** the 13 weeks split into 9 weeks of learning-path content
+(weeks 1-9) followed by 4 weeks of end-to-end project build (weeks 10-13).
+Microsoft Learn ships 9 official learning paths, but a path is not the same as a
+week: the paths map unevenly onto the calendar, so all 9 paths (24 modules,
+roughly 32 hours) complete across weeks 1-9. Weeks 10-13 reserve time to wire the
+isolated labs into one system, which doubles as exam review. See
+[`docs/project-spec.md`](docs/project-spec.md) for the draft project target.
+
+| Week | Learning path | Modules | Exam domain | Status |
+| ---- | ------------- | ------- | ----------- | ------ |
+| 1 | Implement container application hosting on Azure | 2 | Containers (20-25%) | Complete |
+| 2 | Deploy and manage apps on Azure Container Apps | 3 | Containers | In progress |
+| 3 | Deploy and monitor applications on Azure Kubernetes Service | 3 | Containers | Pending |
+| 4 | Develop AI solutions with Azure Cosmos DB for NoSQL | 3 | Data (25-30%) | Pending |
+| 5 | Develop AI solutions with Azure Database for PostgreSQL | 3 | Data | Pending |
+| 6 | Enhance AI solutions with Azure Managed Redis | 3 | Data | Pending |
+| 7 | Integrate backend services for AI solutions | 3 | Connect & consume (20-25%) | Pending |
+| 8 | Manage application secrets and configuration for AI solutions | 2 | Secure/monitor (20-25%) | Pending |
+| 9 | Observe and troubleshoot apps on Azure | 2 | Secure/monitor | Pending |
+| 10 | Project build — phase 1 | — | — | Pending |
+| 11 | Project build — phase 2 | — | — | Pending |
+| 12 | Project build — phase 3 | — | — | Pending |
+| 13 | Project build — phase 4 + exam review | — | — | Pending |
 
 ### Labs
 
