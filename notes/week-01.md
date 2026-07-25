@@ -74,7 +74,7 @@ az acr show --name acrai200dev \
       done
       ```
 
-      ![acr create screenshot](../assets/images/acr.png)
+      ![acr create screenshot](../assets/images/week-0.png)
 
 ## Module 2: Deploy containers to Azure App Service
 
@@ -176,13 +176,13 @@ Delete the plan the same day.
 Full reusable entries for these errors live in
 [`../docs/troubleshooting.md`](../docs/troubleshooting.md). Summary for the week:
 
-| Error | Cause | Fix |
-| ----- | ----- | --- |
-| `RequestDisallowedByAzure`, region not accepting new customers | West Europe is capacity-constrained and rejects new subscriptions | Moved to North Europe, later to Sweden Central |
-| `MissingSubscriptionRegistration` | New PAYG subscriptions have most resource providers unregistered; the portal auto-registers silently but the CLI does not | `az provider register --namespace <ns> --wait` |
-| `Operation cannot be completed without additional quota` (Total VMs: 0) | Zero App Service VM quota in that region. Regional and tier-independent, B1 failed identically to F1 | Created the plan in Sweden Central instead |
-| HTTP 503 after `az webapp create` | Web app exists and routes, but the image pull was rejected, no registry authentication configured | Managed identity + AcrPull + `acrUseManagedIdentityCreds` |
-| HTTP 403, state `QuotaExceeded` | F1 daily CPU/egress limit exhausted by repeated image pulls | Upgraded plan to B1 |
+| Error                                                                   | Cause                                                                                                                     | Fix                                                       |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `RequestDisallowedByAzure`, region not accepting new customers          | West Europe is capacity-constrained and rejects new subscriptions                                                         | Moved to North Europe, later to Sweden Central            |
+| `MissingSubscriptionRegistration`                                       | New PAYG subscriptions have most resource providers unregistered; the portal auto-registers silently but the CLI does not | `az provider register --namespace <ns> --wait`            |
+| `Operation cannot be completed without additional quota` (Total VMs: 0) | Zero App Service VM quota in that region. Regional and tier-independent, B1 failed identically to F1                      | Created the plan in Sweden Central instead                |
+| HTTP 503 after `az webapp create`                                       | Web app exists and routes, but the image pull was rejected, no registry authentication configured                         | Managed identity + AcrPull + `acrUseManagedIdentityCreds` |
+| HTTP 403, state `QuotaExceeded`                                         | F1 daily CPU/egress limit exhausted by repeated image pulls                                                               | Upgraded plan to B1                                       |
 
 Lesson worth flagging: a running container returning 503 usually means a port
 mismatch (`WEBSITES_PORT`), not a crash. The logs look healthy in that failure

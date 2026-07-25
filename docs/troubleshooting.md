@@ -177,3 +177,64 @@ az webapp restart -g rg-ai200-dev -n <APP_NAME>
 
 B1 removes the daily cutoff and enables Always On and SSH. It bills continuously
 (~$13/mo estimate), so delete the plan the same day the lab ends.
+
+## exec fails on a scaled-to-zero Container App
+
+| Field | Detail |
+| ----- | ------ |
+| Week | 02 |
+| Service | Azure Container Apps |
+
+**Message**
+
+```
+az containerapp exec fails to connect (no running replica to attach to)
+when the app is at min-replicas 0 and idle.
+```
+
+**Cause**
+
+Exec attaches a shell to a running container. With `--min-replicas 0` and no
+traffic, KEDA has scaled the app to zero, so there is no replica to attach to.
+This is the same coin as scale-to-zero's free idle: nothing is running to connect
+to.
+
+**Fix**
+
+Wake a replica first, then exec:
+
+```bash
+# wake it with a request
+curl -s https://$FQDN/health
+# or keep a warm replica for the debugging session
+az containerapp update -n ca-retrieval-api -g rg-ai200-dev --min-replicas 1
+```
+
+Set `min-replicas` back to 0 afterwards if the free idle is wanted.
+
+## Pasting `#` comment lines into zsh throws command-not-found errors
+
+| Field | Detail |
+| ----- | ------ |
+| Week | 02 |
+| Service | Shell / zsh (lab tooling) |
+
+**Message**
+
+```
+command not found: #
+zsh: number expected
+(cosmetic errors when a block with `#` comment lines is pasted interactively)
+```
+
+**Cause**
+
+Pasting a multi-line block that contains `#` comment lines into an interactive zsh
+session evaluates the comment text as commands. The actual `az` commands still run;
+the errors are cosmetic noise from the comment lines only.
+
+**Fix**
+
+Run the block as a script (`bash commands.sh`), or strip the comment lines before
+pasting. The lab command file [`../labs/02-container-apps/commands.sh`](../labs/02-container-apps/commands.sh)
+carries this warning at the top for the same reason.

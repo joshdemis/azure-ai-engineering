@@ -15,6 +15,8 @@ If any of the three is unclear, the resource is not created yet.
 | ------- | --------- | ------------ | ---------- | ---------------- |
 | Azure Container Registry (Basic) | No | Yes (~$5/mo) | ACR Tasks compute, negligible | No, keep through Week 5, delete, recreate Week 13 |
 | App Service plan | Yes (F1, unusable for containers) | Yes, B1 ~$13/mo (~$0.018/hr) | No | Yes, always, same day |
+| Container Apps (Consumption) | Yes (monthly grant) | No, scales to zero | vCPU/memory-seconds beyond the grant | Environment yes, unless continuing to module 2/3 |
+| Log Analytics workspace (auto-created by the environment) | Yes (free ingestion allowance) | No standing charge | Ingestion beyond the allowance, small at lab volume | Deleted with the environment |
 
 ## Pricing accuracy
 
