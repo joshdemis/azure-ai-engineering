@@ -236,5 +236,159 @@ the errors are cosmetic noise from the comment lines only.
 **Fix**
 
 Run the block as a script (`bash commands.sh`), or strip the comment lines before
-pasting. The lab command file [`../labs/02-container-apps/commands.sh`](../labs/02-container-apps/commands.sh)
-carries this warning at the top for the same reason.
+pasting. The lab command files
+[`../labs/02-container-apps/commands.sh`](../labs/02-container-apps/commands.sh) and
+[`../labs/02-container-apps/commands-manage.sh`](../labs/02-container-apps/commands-manage.sh)
+carry this warning at the top for the same reason.
+
+## Container restarts under load but runs fine when idle
+
+| Field | Detail |
+| ----- | ------ |
+| Week | 02 |
+| Service | Azure Container Apps |
+
+**Message**
+
+```
+Replica restarts repeatedly once traffic arrives. Liveness probe reports the
+container unhealthy. No application error in the logs; the process is simply gone
+and restarted. The same image runs indefinitely while idle.
+```
+
+**Cause**
+
+Under-resourced replica, not an application defect. Memory too small gets the
+container OOM-killed under load; CPU too small starves it until requests time out and
+the probe fails. Either way the platform restarts it, so a liveness probe faithfully
+reports "unhealthy" when the truth is "too small." The load-dependent pattern is the
+signature: idle fits in the allocation, load does not.
+
+**Fix**
+
+Increase the allocation, respecting the fixed 1 vCPU : 2 GiB ratio, or scale out
+sooner so no single replica takes enough load to die:
+
+```bash
+# bigger replicas (valid pairings only: 0.25/0.5Gi, 0.5/1Gi, 1/2Gi, ...)
+az containerapp update -n ca-retrieval-api -g rg-ai200-dev --cpu 0.5 --memory 1Gi
+# or more replicas
+az containerapp update -n ca-retrieval-api -g rg-ai200-dev --max-replicas 5
+```
+
+Do not start by debugging the application. Note also that replica count is KEDA's
+concern and replica size is the compute scheduler's; "the app is slow" can be either,
+and they have different fixes. See
+[`../notes/02b-container-apps-manage.md`](../notes/02b-container-apps-manage.md).
+
+## New revision unexpectedly took 100% of traffic
+
+| Field | Detail |
+| ----- | ------ |
+| Week | 02 |
+| Service | Azure Container Apps |
+
+**Message**
+
+```
+No error. `az containerapp update` in multiple revision mode was expected to create a
+revision at 0% traffic; the new revision took 100% and served every request
+immediately.
+```
+
+**Cause**
+
+Multiple revision mode only permits revisions to coexist. It does not pin traffic. With
+traffic left unpinned (floating), `latest` inherits 100% on every deploy, so a new
+revision goes live to everyone. Revision mode and traffic weights are two separate
+settings, and only the second one holds traffic still.
+
+**Fix**
+
+Pin traffic to the current revision by name before deploying. That is the act that arms
+the 0%-canary behaviour:
+
+```bash
+az containerapp ingress traffic set -n ca-retrieval-api -g rg-ai200-dev \
+  --revision-weight ca-retrieval-api--0000004=100
+```
+
+Subsequent deploys then arrive live but at 0% traffic until weights are dialled
+explicitly.
+
+## Probes show tcpSocket that were never configured
+
+| Field | Detail |
+| ----- | ------ |
+| Week | 02 |
+| Service | Azure Container Apps |
+
+**Message**
+
+```
+az containerapp show --query "properties.template.containers[0].probes"
+returns Liveness/Readiness/Startup probes of type tcpSocket on an app where no probes
+were ever defined (readiness showing failureThreshold: 48).
+```
+
+**Cause**
+
+Container Apps auto-generates default probes when none are configured, and the defaults
+are TCP. There is no blank slate. `failureThreshold: 48` is Azure's default value, not
+a chosen one. A TCP probe only proves the port is open, so a wedged app holding its
+listening socket while unable to serve passes it. The weak default is the problem, not
+the presence of probes.
+
+**Fix**
+
+Export the spec, convert the probes to HTTP against a real health endpoint, apply, then
+verify what actually landed (YAML indentation is unforgiving and the update will accept
+a misplaced block):
+
+```bash
+az containerapp show -n ca-retrieval-api -g rg-ai200-dev -o yaml > app.yaml
+# edit: replace each tcpSocket block with httpGet { path: /health, port: 8000 }
+az containerapp update -n ca-retrieval-api -g rg-ai200-dev --yaml app.yaml
+az containerapp show -n ca-retrieval-api -g rg-ai200-dev \
+  --query "properties.template.containers[0].probes" -o yaml
+```
+
+The exported `app.yaml` contains the subscription, tenant, and principal IDs verbatim.
+It is git-ignored, not committed.
+
+## Container App in a restart loop
+
+| Field | Detail |
+| ----- | ------ |
+| Week | 02 |
+| Service | Azure Container Apps |
+
+**Message**
+
+```
+Replica restarts continuously. Logs show the app beginning to start, then the process
+terminating before it finishes booting, repeatedly.
+```
+
+**Cause**
+
+An over-aggressive liveness probe, or a missing startup probe. Liveness kills the
+container when it fails past its threshold. If the timeout is too short or the
+threshold too low, it fires during boot, a garbage-collection pause, or a slow request,
+kills a container that was fine, and then fires again during the restart's boot. The
+probe manufactures the outage it exists to prevent.
+
+The underlying reason a startup probe is needed at all: "no response" means different
+things at different times. During boot it is expected and the right action is to wait;
+after boot it is alarming and the right action is to kill. Only elapsed time
+distinguishes the two, and the startup probe is the gate that switches the
+interpretation.
+
+**Fix**
+
+Add or widen the startup probe so liveness is held off until boot completes. The grace
+window is `failureThreshold × periodSeconds` (6 × 5s = 30s). Then loosen liveness:
+raise `timeoutSeconds` and `failureThreshold` so a transient stall is not fatal.
+Readiness, not liveness, is the probe that should react quickly, because it only
+withholds traffic instead of killing the container: readiness is traffic, liveness is
+life.

@@ -75,6 +75,35 @@ attributable.
 | Azure Cloud Shell | Browser fallback when local CLI is unavailable. |
 | Docker | Not required locally. Images are built in the cloud with `az acr build` (ACR Tasks quick tasks). |
 
+### CLI extension versions
+
+The Azure CLI ships a stable core plus extensions installed on demand. `containerapp`
+is one of those extensions, versioned separately from the core and still in preview,
+which is why every `az containerapp` command prints:
+
+```
+WARNING: behavior altered by extension: containerapp
+```
+
+That is informational, not an error, and it is not suppressed here: blanket-suppressing
+CLI warnings hides the ones that matter.
+
+The extension version is part of the reproducible environment. A command whose
+behaviour changes between sessions is more likely an extension version bump than a
+service change, and preview extensions change shape faster than the core CLI does. So
+record both alongside any command sequence that is meant to be reproducible:
+
+```bash
+az version
+az extension list --query "[].{name:name, version:version}" -o table
+```
+
+| Field | Value |
+| ----- | ----- |
+| `azure-cli` core version | `2.74.0` |
+| `containerapp` extension version | `1.2.0b4` (the `b4` is the preview marker) |
+| Recorded on | Week 02 (2026-07) |
+
 ## Resource inventory
 
 | Service | Name | SKU | Created | Delete by |

@@ -195,9 +195,17 @@ The full command sequence for this module, each line with an inline comment, is 
 All IDs (subscription, tenant, principal) are captured into shell variables there
 rather than hard-coded, so no real GUIDs land in the repo.
 
-## Module 2: _TBD_
+## Module 2: Manage containers in Azure Container Apps
 
-_Pending._
+Full notes: [`02b-container-apps-manage.md`](02b-container-apps-manage.md)
+Linked lab: [`../labs/02-container-apps/commands-manage.sh`](../labs/02-container-apps/commands-manage.sh)
+
+Module 1 was deploy. Module 2 is day two: revision mode versus traffic weights, the
+pinning rule that arms canary behaviour, canary/rollback/blue-green as one mechanism,
+health probes (readiness is traffic, liveness is life), HTTP versus TCP probes and
+Azure's weak TCP defaults, and replica sizing under the fixed 1 vCPU : 2 GiB ratio.
+
+The through-line: traffic is a dial, not a switch.
 
 ## Module 3: _TBD_
 
