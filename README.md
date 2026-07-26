@@ -97,8 +97,8 @@ isolated labs into one system, which doubles as exam review. See
 | Week | Learning path | Modules | Exam domain | Status |
 | ---- | ------------- | ------- | ----------- | ------ |
 | 1 | Implement container application hosting on Azure | 2 | Containers (20-25%) | Complete |
-| 2 | Deploy and manage apps on Azure Container Apps | 3 | Containers | In progress |
-| 3 | Deploy and monitor applications on Azure Kubernetes Service | 3 | Containers | Pending |
+| 2 | Deploy and manage apps on Azure Container Apps | 3 | Containers | Complete |
+| 3 | Deploy and monitor applications on Azure Kubernetes Service | 3 | Containers | In progress |
 | 4 | Develop AI solutions with Azure Cosmos DB for NoSQL | 3 | Data (25-30%) | Pending |
 | 5 | Develop AI solutions with Azure Database for PostgreSQL | 3 | Data | Pending |
 | 6 | Enhance AI solutions with Azure Managed Redis | 3 | Data | Pending |

@@ -17,6 +17,7 @@ If any of the three is unclear, the resource is not created yet.
 | App Service plan | Yes (F1, unusable for containers) | Yes, B1 ~$13/mo (~$0.018/hr) | No | Yes, always, same day |
 | Container Apps (Consumption) | Yes (monthly grant) | No, scales to zero | vCPU/memory-seconds beyond the grant | Environment yes, unless continuing to module 2/3 |
 | Log Analytics workspace (auto-created by the environment) | Yes (free ingestion allowance) | No standing charge | Ingestion beyond the allowance, small at lab volume | Deleted with the environment |
+| Storage account (Standard LRS, queue for the KEDA scaler) | No, but negligible at lab volume | Minimal (per GB stored; a queue of 20 messages is effectively nothing) | Per transaction (put, peek, get). KEDA polling the queue is itself billable transactions. | Yes, same day |
 
 ## Container Apps: what the usage cost is actually metered on
 
@@ -44,6 +45,35 @@ Three consequences for the two levers touched in week 2, module 2:
 
 Neither lever changes the free monthly grant, which is applied against total
 vCPU-seconds and GiB-seconds for the subscription.
+
+## The scale rule is a cost control, and it can silently stop being one
+
+Week 2, module 3 added the third lever: the scale rule decides how many replicas run,
+and therefore how many replica-seconds are metered.
+
+The trap found in the lab is worth recording, because it costs money quietly rather than
+failing loudly. **A revision whose scale rule watches a signal that never falls will
+hold replicas indefinitely.** The queue scale rule targeted 5 messages per replica
+against a 20-message queue, so KEDA started 4 replicas, correctly. But the image is not
+a queue consumer, so nothing drained the queue, the depth stayed at 20, and the replica
+count stayed at 4. `min-replicas 0` was set the whole time and made no difference: the
+floor was never reached because the rule kept asking for 4.
+
+Nothing errors in this state. The app looks healthy and simply bills continuously.
+
+Two rules that follow:
+
+- Before walking away from a queue-scaled or event-scaled app, confirm the signal can
+  actually reach zero. If nothing is consuming, reset the app to a rule that can (an
+  HTTP rule), or set `max-replicas 0` while it is idle.
+- CPU and memory rules cannot reach zero by design, so an app using them has a permanent
+  floor of one replica and a permanent standing charge. That is a cost decision, not
+  only an architectural one. See
+  [`../labs/02-container-apps/02c-container-apps-scale.md`](../labs/02-container-apps/02c-container-apps-scale.md).
+
+Storage account note: the account backing the queue is cheap to keep but pointless to
+keep, and it is the one resource from module 3 that bills while idle. Delete it with the
+lab.
 
 ## Pricing accuracy
 

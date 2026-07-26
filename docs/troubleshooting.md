@@ -237,9 +237,56 @@ the errors are cosmetic noise from the comment lines only.
 
 Run the block as a script (`bash commands.sh`), or strip the comment lines before
 pasting. The lab command files
-[`../labs/02-container-apps/commands.sh`](../labs/02-container-apps/commands.sh) and
+[`../labs/02-container-apps/commands.sh`](../labs/02-container-apps/commands.sh),
 [`../labs/02-container-apps/commands-manage.sh`](../labs/02-container-apps/commands-manage.sh)
+and
+[`../labs/02-container-apps/commands-scale.sh`](../labs/02-container-apps/commands-scale.sh)
 carry this warning at the top for the same reason.
+
+This is the mild version of the failure. The severe version, where the paste stops
+executing entirely, is the next entry.
+
+## zsh drops to a `quote>` prompt after pasting a block
+
+| Field | Detail |
+| ----- | ------ |
+| Week | 02 |
+| Service | Shell / zsh (lab tooling) |
+
+**Message**
+
+```
+quote>
+(the prompt after pasting a multi-line block; no command runs, everything typed
+afterwards is swallowed)
+```
+
+**Cause**
+
+The same root cause as the entry above, escalated. A pasted `#` comment line containing
+an apostrophe (a possessive or a contraction in the prose) is evaluated by interactive
+zsh as the **start of a single-quoted string**. The quote is never closed, so zsh
+switches to its continuation prompt and buffers every subsequent line as string data.
+
+This is materially worse than the cosmetic case, because there the `az` commands still
+ran. Here they do not. The shell looks like it accepted the paste, no error is printed,
+and none of the remaining commands execute. Half a lab silently does not happen.
+
+**Fix**
+
+Press **Ctrl+C**. That abandons the buffered line and returns a normal prompt. Then run
+the block properly:
+
+```bash
+bash commands-scale.sh
+# or, to hand-run one section, strip the comments first
+grep -v '^\s*#' commands-scale.sh | pbcopy
+```
+
+Prevention, in order of reliability: run command files as scripts rather than pasting
+them; keep apostrophes out of comment lines in lab scripts; and if a block must be
+pasted, strip comment lines first. This has now bitten three sessions in a row, which is
+why `commands-scale.sh` carries an oversized warning header rather than a one-line note.
 
 ## Container restarts under load but runs fine when idle
 
@@ -279,7 +326,7 @@ az containerapp update -n ca-retrieval-api -g rg-ai200-dev --max-replicas 5
 Do not start by debugging the application. Note also that replica count is KEDA's
 concern and replica size is the compute scheduler's; "the app is slow" can be either,
 and they have different fixes. See
-[`../notes/02b-container-apps-manage.md`](../notes/02b-container-apps-manage.md).
+[`../labs/02-container-apps/02b-container-apps-manage.md`](../labs/02-container-apps/02b-container-apps-manage.md).
 
 ## New revision unexpectedly took 100% of traffic
 
@@ -392,3 +439,54 @@ raise `timeoutSeconds` and `failureThreshold` so a transient stall is not fatal.
 Readiness, not liveness, is the probe that should react quickly, because it only
 withholds traffic instead of killing the container: readiness is traffic, liveness is
 life.
+
+## App stuck at N replicas and will not scale back to zero
+
+| Field | Detail |
+| ----- | ------ |
+| Week | 02 |
+| Service | Azure Container Apps (KEDA) |
+
+**Message**
+
+```
+No error. `az containerapp replica list` keeps returning the same replica count
+indefinitely with no traffic arriving. `--min-replicas 0` is set. The app never
+scales down and bills continuously.
+```
+
+**Cause**
+
+A scale rule whose signal never falls. In the lab this was an `azure-queue` rule with
+`queueLength=5` against a queue holding 20 messages: KEDA computed 4 replicas and
+started 4, correctly. But the image running was `retrieval-api`, a FastAPI app that is
+not a queue consumer, so nothing popped the messages. Depth stayed at 20, the rule kept
+asking for 4, and the replica count never moved.
+
+`min-replicas 0` is not the problem and does not help. It sets the floor; it does not
+override the rule. The floor is simply never reached because the rule keeps requesting
+replicas. The same shape applies to any scale rule pointed at a backlog with no
+consumer, or at a metric that is stuck high.
+
+Note the related but distinct case: **CPU and memory scale rules can never reach zero at
+all**, by design, because their signal is measured inside a replica and does not exist
+when no replica is running. An app on a CPU rule sitting at 1 replica forever is working
+as intended, not stuck.
+
+**Fix**
+
+Point the app at a signal that can reach zero, which for a lab means a plain HTTP rule:
+
+```bash
+az containerapp update -n ca-retrieval-api -g rg-ai200-dev \
+  --min-replicas 0 --max-replicas 3 \
+  --scale-rule-name http-rule --scale-rule-type http \
+  --scale-rule-http-concurrency 10
+```
+
+Then delete the queue or the storage account behind it if the lab is finished. In real
+use the fix is the opposite direction: deploy a worker that actually drains the queue,
+so depth falls and KEDA scales down on its own. Diagnostic question to reach for first:
+what signal is this rule watching, and is anything capable of making that signal go
+down? See
+[`../labs/02-container-apps/02c-container-apps-scale.md`](../labs/02-container-apps/02c-container-apps-scale.md).

@@ -2,8 +2,12 @@
 
 Learning path: Deploy and manage apps on Azure Container Apps (3 modules)
 Exam domain: Develop containerized solutions on Azure (20-25%)
+Status: complete (all 3 modules)
 
-Linked lab: [`../labs/02-container-apps/commands.sh`](../labs/02-container-apps/commands.sh)
+Linked labs:
+[`commands.sh`](../labs/02-container-apps/commands.sh) (module 1),
+[`commands-manage.sh`](../labs/02-container-apps/commands-manage.sh) (module 2),
+[`commands-scale.sh`](../labs/02-container-apps/commands-scale.sh) (module 3)
 
 ## Module 1: Deploy containers to Azure Container Apps
 
@@ -197,7 +201,7 @@ rather than hard-coded, so no real GUIDs land in the repo.
 
 ## Module 2: Manage containers in Azure Container Apps
 
-Full notes: [`02b-container-apps-manage.md`](02b-container-apps-manage.md)
+Full notes: [`../labs/02-container-apps/02b-container-apps-manage.md`](../labs/02-container-apps/02b-container-apps-manage.md)
 Linked lab: [`../labs/02-container-apps/commands-manage.sh`](../labs/02-container-apps/commands-manage.sh)
 
 Module 1 was deploy. Module 2 is day two: revision mode versus traffic weights, the
@@ -207,6 +211,77 @@ Azure's weak TCP defaults, and replica sizing under the fixed 1 vCPU : 2 GiB rat
 
 The through-line: traffic is a dial, not a switch.
 
-## Module 3: _TBD_
+## Module 3: Scale containers in Azure Container Apps
 
-_Pending._
+Full notes: [`../labs/02-container-apps/02c-container-apps-scale.md`](../labs/02-container-apps/02c-container-apps-scale.md)
+Linked lab: [`../labs/02-container-apps/commands-scale.sh`](../labs/02-container-apps/commands-scale.sh)
+
+Modules 1 and 2 kept naming KEDA without configuring it. Module 3 is where "how many
+replicas" actually gets built: scale rule types (HTTP, TCP, CPU, memory, custom KEDA
+scalers), the scale-to-zero observability rule, the up-fast/down-slow asymmetry, the
+independence of traffic weights and scale rules, and a queue scaler authenticated with
+managed identity.
+
+The through-line: a scale rule is a trigger plus an arithmetic. `min/max-replicas` sets
+the range, the rule decides where in that range the app sits, KEDA is the engine that
+evaluates it.
+
+Three things worth keeping outside the module notes because they generalise:
+
+- **Scale-to-zero is a question of where the signal is measured.** A scaler reaches zero
+  only if its signal is observable while zero replicas run. HTTP counts live at ingress
+  and queue depth lives in the queue, so both are readable at zero. CPU and memory are
+  measured inside a container, so at zero replicas the signal does not read zero, it
+  does not exist. Hence the hard floor of 1 on CPU and memory rules.
+- **When the penalties for over- and under-reacting are asymmetric, tune toward the
+  cheaper mistake.** A wrongful keep costs pennies; a wrongful kill costs cold starts
+  and thrash. Same shape as module 2's liveness `failureThreshold: 3`.
+- **Traffic and scaling do not talk to each other.** A revision at 0% HTTP traffic still
+  scales to N replicas on its queue rule. A queue worker has no ingress at all.
+
+## Week 2 wrap-up
+
+The Container Apps path is complete. Between the three modules it adds up to the full
+operational picture of a serverless container platform, reasoned through rather than
+copied:
+
+| Module | Question | Core content |
+| ------ | -------- | ------------ |
+| 1. Deploy | How does it run at all? | Private registry pull via managed identity, environments (shared VNet plus Log Analytics), revisions as immutable snapshots, secrets and `secretref:`, exec and logs |
+| 2. Manage | How does it change without breaking? | Revision modes, traffic as a named and pinned dial, canary/rollback/blue-green as one mechanism, health probes (readiness is traffic, liveness is life, HTTP beats TCP), resource tuning at the fixed 1:2 CPU:memory ratio |
+| 3. Scale | How many of it run, and why? | Scale rules and KEDA, the scale-to-zero observability rule, up-fast/down-slow asymmetry, traffic-versus-scaling independence, queue scaler with managed identity |
+
+What actually compounded across the week:
+
+- **Immutability, at three layers.** Week 1: images are immutable, addressed by digest.
+  Module 1: revisions are immutable snapshots. Module 2: rollback is only a pointer
+  change because the old thing still exists unchanged. The same idea keeps paying off
+  one level up each time.
+- **The managed-identity pattern, five times now.** App Service pull from ACR, Container
+  Apps pull from ACR, Container Apps read from Storage Queues. Principal, role, scope.
+  Only the two nouns change, and it has stopped being something to look up.
+- **Capability is not configuration.** `acrUseManagedIdentityCreds`,
+  `registry set --identity system`, `--scale-rule-identity system`. Granting a role
+  makes an identity able to do something; a separate flag makes the app choose to
+  authenticate as it. Forgetting the second step fails silently every time.
+- **Count and size are owned by different components.** KEDA decides how many replicas;
+  the compute scheduler decides how big each one is. "The app is slow" splits into two
+  diagnoses with two different fixes and no overlapping commands.
+
+Everything here returns in week 3 on AKS with the management removed: probes become
+Kubernetes probes with the same three types, traffic splitting becomes an ingress
+controller or service mesh to configure, replica sizing becomes requests and limits with
+no fixed ratio, and KEDA becomes an add-on to install and operate rather than a built-in.
+Container Apps was the right place to learn the model before owning it.
+
+### Cost state at end of week 2
+
+The Container Apps environment scales to zero and the storage account created for the
+queue scaler was deleted the same day. The ACR from week 1 remains, deliberately, as the
+only standing charge. See [`../docs/cost-matrix.md`](../docs/cost-matrix.md).
+
+### Next
+
+Week 3: Deploy and monitor applications on Azure Kubernetes Service. Run the pre-flight
+quota check in [`../docs/environment.md`](../docs/environment.md) before provisioning a
+cluster.

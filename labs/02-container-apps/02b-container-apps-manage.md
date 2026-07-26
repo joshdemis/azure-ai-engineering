@@ -4,9 +4,10 @@ Learning path: Deploy and manage apps on Azure Container Apps (module 2 of 3)
 Exam domain: Develop containerized solutions on Azure (20-25%), with a large overlap
 into Secure, monitor, and troubleshoot Azure solutions (20-25%)
 
-Week index: [`week-02.md`](week-02.md)
-Module 1 notes: [`week-02.md`](week-02.md) (section "Module 1: Deploy containers to Azure Container Apps")
-Linked lab: [`../labs/02-container-apps/commands-manage.sh`](../labs/02-container-apps/commands-manage.sh)
+Week index: [`../../notes/week-02.md`](../../notes/week-02.md)
+Module 1 notes: [`../../notes/week-02.md`](../../notes/week-02.md) (section "Module 1: Deploy containers to Azure Container Apps")
+Module 1 commands: [`commands.sh`](commands.sh)
+Module 2 commands: [`commands-manage.sh`](commands-manage.sh)
 
 ## Framing: traffic is a dial, not a switch
 
@@ -357,13 +358,12 @@ hides the ones that matter, and this one costs nothing to read past. Second, the
 extension version is part of the reproducible environment: a command that behaves
 differently next month is more likely an extension version change than a service
 change. `az version` output, including installed extension versions, is recorded in
-[`../docs/environment.md`](../docs/environment.md).
+[`../../docs/environment.md`](../../docs/environment.md).
 
 ## Commands
 
 The full command sequence for this module, each line with an inline comment and in run
-order, is in
-[`../labs/02-container-apps/commands-manage.sh`](../labs/02-container-apps/commands-manage.sh).
+order, is in [`commands-manage.sh`](commands-manage.sh) alongside this file.
 
 ## What carried forward
 

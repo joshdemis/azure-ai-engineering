@@ -114,6 +114,62 @@ Configuration flags for the registry: `adminUserEnabled: false`,
 `anonymousPullEnabled: false`. Cost detail is tracked in
 [`cost-matrix.md`](cost-matrix.md).
 
+Created and deleted within week 02: a Container Apps environment plus
+`ca-retrieval-api`, and a `Standard_LRS` storage account holding the `ingest` queue used
+for the KEDA queue-scaler lab. The storage account was deleted the same day, as the only
+module 3 resource that bills while idle.
+
+## Reusable platform principles
+
+Principles established in a lab that apply beyond the service they were learned on.
+Recorded here rather than only in the week notes so they are findable when the same
+question arrives on a different service.
+
+### Scale-to-zero requires an externally observable signal
+
+From week 02, module 3 (KEDA on Container Apps), and it applies to any autoscaler.
+
+> A scaler can reach zero if and only if its signal is observable while zero replicas
+> are running.
+
+The test is **where the signal is measured**, not what it measures.
+
+| Signal location | Examples | Reaches zero |
+| --------------- | -------- | ------------ |
+| External to the app | HTTP request count (measured at ingress), queue depth (measured in the queue), Service Bus message count, Event Hub lag | Yes |
+| Internal to a replica | CPU utilisation, memory utilisation | No, hard floor of 1 |
+
+An external signal persists whether or not any replica exists, so the platform can see
+work waiting and start the first replica. An internal metric has nothing to sample when
+no container is running: the signal does not read zero, it does not exist. Requiring a
+replica to produce the reading that would start a replica is circular, so CPU and memory
+rules are floored at 1.
+
+Two consequences that carry forward:
+
+- **It is a cost decision as much as an architectural one.** A workload that only knows
+  it is busy by watching its own CPU must always pay for at least one replica. Driving
+  the same workload from a queue makes zero idle cost possible.
+- **It transfers to AKS in week 03.** The Horizontal Pod Autoscaler works on internal
+  metrics and cannot scale to zero for the same reason; reaching zero there requires
+  KEDA installed explicitly, because Kubernetes does not do it natively.
+
+Full reasoning:
+[`../labs/02-container-apps/02c-container-apps-scale.md`](../labs/02-container-apps/02c-container-apps-scale.md).
+
+### Tune toward the cheaper mistake
+
+Also from week 02. Where a control loop can err in two directions and the penalties are
+asymmetric, bias it toward the cheaper error rather than toward the midpoint.
+
+KEDA scales up quickly and down slowly (roughly a five-minute cool-down) because a
+wrongful keep costs a few replica-minutes while a wrongful kill costs cold starts for
+every request in the gap, and thrash on bursty traffic. Module 2's liveness
+`failureThreshold: 3` is the same reasoning: killing a container that was healthy is
+expensive, waiting one more interval is cheap. The same shape governs retry policies,
+circuit breakers, and alert thresholds. Naming the cost of each direction of error is
+what makes the tuning direction obvious instead of a guess.
+
 ## Naming convention
 
 Standard pattern: `<type>-ai200-dev`, where `<type>` is a short abbreviation of
