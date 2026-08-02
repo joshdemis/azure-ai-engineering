@@ -490,3 +490,139 @@ so depth falls and KEDA scales down on its own. Diagnostic question to reach for
 what signal is this rule watching, and is anything capable of making that signal go
 down? See
 [`../labs/02-container-apps/02c-container-apps-scale.md`](../labs/02-container-apps/02c-container-apps-scale.md).
+
+## AKS node size rejected (three separate gates)
+
+| Field | Detail |
+| ----- | ------ |
+| Week | 03 |
+| Service | Azure Kubernetes Service |
+
+**Message**
+
+```
+(BadRequest) The VM size of Standard_B2s is not allowed in your subscription in
+location 'swedencentral'. The available VM sizes are ...
+
+Operation could not be completed as it results in exceeding approved
+standardBsv2Family Cores quota. Current Limit: 0
+```
+
+**Cause**
+
+A node size must clear **all three** of the following, and each error only reveals one
+gate at a time, so a rejected size tells you nothing about the next gate behind it:
+
+1. **The AKS subscription allow-list.** Not every VM size is permitted as an AKS node on
+   every subscription and region. The allowed list is printed inside the `BadRequest`
+   "VM size not allowed" error itself, which makes that error the most useful of the
+   three.
+2. **The per-family vCPU quota.** Each VM family (Bsv2, Dsv6, and so on) has its own
+   limit, often 0 on a fresh subscription. Check with `az vm list-usage`.
+3. **The Total Regional vCPUs ceiling.** A single shared pool for the region, also in
+   `az vm list-usage`, that every family draws from.
+
+The key insight is the relationship between gates 2 and 3: family quota is per-family,
+but all families draw on the one Total Regional pool. A family limit of 10 does not mean
+10 cores are available if the regional total is also 10 and something else is using it.
+The real budget is the regional number.
+
+Sequence hit on a fresh Sweden Central Pay-As-You-Go subscription:
+
+| Size | Gate that refused it |
+| ---- | -------------------- |
+| `Standard_B2s` | Not on the AKS allow-list |
+| `standard_b2s_v2` | Family vCPU quota of 0 |
+| `Standard_B2ms` | Not on the AKS allow-list |
+| `standard_d2s_v6` | Cleared all three (Dsv6 family limit 10, regional total 10) |
+
+**Fix**
+
+Check both quota numbers before choosing a size, not after the first failure:
+
+```bash
+az vm list-usage --location swedencentral \
+  --query "[?contains(localName,'Total Regional') || contains(localName,'Dsv6')].{Name:localName,Used:currentValue,Limit:limit}" \
+  -o table
+```
+
+Then pick a size that appears in the allow-list printed by the `BadRequest` error and has
+headroom in both its family quota and the regional total. Quota increases are requested
+via Subscription > Usage + quotas and are usually auto-approved on Pay-As-You-Go. See the
+pre-flight check in [`environment.md`](environment.md).
+
+## Pod stuck in ContainerCreating with a 401 pull event
+
+| Field | Detail |
+| ----- | ------ |
+| Week | 03 |
+| Service | Azure Kubernetes Service / Azure Container Registry |
+
+**Message**
+
+```
+kubectl get pods      -> retrieval-api-...  0/1  ContainerCreating
+kubectl describe pod  -> Events: Failed to pull image
+                         "acrai200dev.azurecr.io/retrieval-api:v2":
+                         401 unauthorized
+                         ... ImagePullBackOff
+```
+
+**Cause**
+
+The cluster's kubelet identity has no `AcrPull` on the registry, so the pull is rejected.
+This is the AKS instance of the managed-identity pattern: the cluster has an identity,
+but nothing has granted it access to the registry.
+
+Distinguish it from the other pull failure that presents identically at the `get pods`
+level. Only the event text separates them, and they have different fixes:
+
+| Event text | Cause | Fix |
+| ---------- | ----- | --- |
+| `401 unauthorized` | Authorisation: AcrPull not granted | Attach the registry to the cluster |
+| `404 not found` | Addressing: wrong image name or tag | Fix the image reference in the manifest |
+
+`ImagePullBackOff` is not a third cause. It means Kubernetes has retried the pull enough
+times to start backing off, and the real reason is still in the earlier events.
+
+**Fix**
+
+Attach the registry, which wires the `AcrPull` grant to the cluster's kubelet identity in
+one command:
+
+```bash
+az aks update --resource-group rg-ai200-dev --name aks-ai200-dev --attach-acr acrai200dev
+```
+
+This is an `az` command, not `kubectl`: it configures Azure resources rather than
+deploying into the cluster. Existing pods retry on their own once the grant lands.
+
+## kubectl: command not found
+
+| Field | Detail |
+| ----- | ------ |
+| Week | 03 |
+| Service | Kubernetes tooling |
+
+**Message**
+
+```
+zsh: command not found: kubectl
+```
+
+**Cause**
+
+`kubectl` is a standalone, cloud-agnostic binary and is not part of the Azure CLI.
+Installing `az` does not install it. This is the tooling-level version of the two-control-
+planes distinction: `az` manages the cluster as an Azure resource, `kubectl` manages what
+runs inside it, and they ship separately.
+
+**Fix**
+
+```bash
+az aks install-cli     # or: brew install kubectl
+az aks get-credentials --resource-group rg-ai200-dev --name aks-ai200-dev
+```
+
+`get-credentials` is the bridge: it writes the cluster's connection details into
+`~/.kube/config` so the universal tool can reach this specific cluster.

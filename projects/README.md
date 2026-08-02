@@ -14,7 +14,5 @@ grade solutions. Where labs isolate a single service, projects integrate them.
 
 | Project | Summary | Status |
 | ------- | ------- | ------ |
-| [Chatbot](chatbot/) | Conversational AI application | ☐ |
-| [Enterprise RAG](enterprise-rag/) | Retrieval-augmented generation over private data | ☐ |
-| [AI Agent](ai-agent/) | Autonomous / tool-using agent | ☐ |
-| [Future](future/) | Backlog of ideas for post-certification work | ☐ |
+| [retrieval-api](retrieval-api/) | The FastAPI service carried forward through every hosting path: App Service, Container Apps, AKS | ☑ in use |
+| [ConspiraGraph](conspiragraph/) | The weeks 10-13 capstone. Specified in [`../docs/project-spec.md`](../docs/project-spec.md) | ☐ |

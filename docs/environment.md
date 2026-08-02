@@ -31,6 +31,10 @@ Region history (three moves before landing on the standard):
    for every resource in this roadmap, and ACR was migrated here. Full error
    detail for each move is logged in [`troubleshooting.md`](troubleshooting.md).
 
+The resource group itself was not moved and is still in `northeurope`, which is why
+`--location swedencentral` has to be passed explicitly on every create. See
+[Region inheritance](#region-inheritance-the-resource-groups-region-is-the-default).
+
 ### Pre-flight quota check
 
 Run before any compute-provisioning week (3, 4, 5) to confirm the region has
@@ -47,12 +51,49 @@ increase. On Pay-As-You-Go they are usually auto-approved and cost nothing. Quot
 is permission to allocate, not allocation, so raising it does not itself create or
 bill for anything.
 
+The Total Regional number is only one of the gates an AKS node size has to clear. The
+other two are the AKS subscription allow-list and the per-family vCPU quota, and all
+three are documented in [`troubleshooting.md`](troubleshooting.md).
+
 ## Resource group
 
 | Field | Value |
 | ----- | ----- |
 | Name | `rg-ai200-dev` |
-| Region | `swedencentral` |
+| Region | `northeurope` |
+
+The resource group is still in `northeurope`. It was created there in week 1, before
+the roadmap standardised on `swedencentral`, and it was never moved: the resources
+inside it were migrated, the group itself was not. Read the next section before
+creating anything in it.
+
+### Region inheritance: the resource group's region is the default
+
+**Any resource created without an explicit `--location swedencentral` inherits the
+resource group's region, which is `northeurope`.** This is the single most repeated
+environment mistake in the roadmap so far, on its third occurrence, so it is recorded
+here as the definitive entry rather than in a week note.
+
+| # | Occurrence | Result |
+| - | ---------- | ------ |
+| 1 | Week 1: the roadmap standardised on `swedencentral` but the resource group was left behind in `northeurope` | Every later create inherits the wrong region by default |
+| 2 | Week 3: the first `az aks create` without a location | Attempted to build the cluster in North Europe |
+| 3 | Week 3: the monitoring add-on's Data Collection Rule, created implicitly by the add-on | `MSCI-northeurope-aks-ai200-dev` landed in North Europe alongside a Sweden Central cluster |
+
+The third case is the instructive one, because no command of mine named a location at
+all. A resource created **on your behalf** by an add-on or a platform feature inherits
+the group's region just as a resource you create does, so passing `--location` on the
+parent command is not enough to cover everything the command produces.
+
+Two rules follow:
+
+- Pass `--location swedencentral` explicitly on every create, even when it looks
+  redundant.
+- After enabling any add-on, check where its resources actually landed.
+
+Recreating the resource group in `swedencentral` is the permanent fix and is still an
+option. It has not been done, because it means recreating or moving everything inside
+it.
 
 ## Standard tags
 
@@ -118,6 +159,11 @@ Created and deleted within week 02: a Container Apps environment plus
 `ca-retrieval-api`, and a `Standard_LRS` storage account holding the `ingest` queue used
 for the KEDA queue-scaler lab. The storage account was deleted the same day, as the only
 module 3 resource that bills while idle.
+
+Created and deleted within week 03: `aks-ai200-dev` (free control-plane tier, two
+`standard_d2s_v6` nodes) and the Log Analytics workspace and Data Collection Rule created
+by the monitoring add-on. AKS nodes bill continuously and cannot scale to zero, so the
+cluster is created and deleted on the same day, every time.
 
 ## Reusable platform principles
 

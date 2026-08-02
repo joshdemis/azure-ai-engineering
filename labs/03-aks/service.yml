@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: retrieval-api
+spec:
+  type: ClusterIP
+  selector:
+    app: retrieval-api
+  ports:
+    - port: 80
+      targetPort: 8000

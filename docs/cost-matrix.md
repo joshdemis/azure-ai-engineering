@@ -18,6 +18,7 @@ If any of the three is unclear, the resource is not created yet.
 | Container Apps (Consumption) | Yes (monthly grant) | No, scales to zero | vCPU/memory-seconds beyond the grant | Environment yes, unless continuing to module 2/3 |
 | Log Analytics workspace (auto-created by the environment) | Yes (free ingestion allowance) | No standing charge | Ingestion beyond the allowance, small at lab volume | Deleted with the environment |
 | Storage account (Standard LRS, queue for the KEDA scaler) | No, but negligible at lab volume | Minimal (per GB stored; a queue of 20 messages is effectively nothing) | Per transaction (put, peek, get). KEDA polling the queue is itself billable transactions. | Yes, same day |
+| Azure Kubernetes Service | Control plane only (`--tier free`). Nodes are never free. | Yes, and it does not stop: nodes bill continuously with no scale-to-zero (~$0.20/hr for 2 × `standard_d2s_v6`) | Azure Load Balancer plus a public IP if a Service uses `type: LoadBalancer` | Yes, always, same day |
 
 ## Container Apps: what the usage cost is actually metered on
 
@@ -74,6 +75,33 @@ Two rules that follow:
 Storage account note: the account backing the queue is cheap to keep but pointless to
 keep, and it is the one resource from module 3 that bills while idle. Delete it with the
 lab.
+
+## AKS: the one service that can drain the budget
+
+Every other compute service in the roadmap either scales to zero or bills a small fixed
+amount. AKS does neither. Nodes are VMs, they bill per hour whether or not a single pod is
+scheduled on them, and Kubernetes has no native scale-to-zero. An idle cluster costs
+exactly as much as a busy one.
+
+That makes the discipline different from week 2's. With Container Apps, forgetting to
+delete something cost nothing while it was idle. Here, forgetting is the entire risk:
+$0.20/hr is trivial for a three-hour lab and roughly $145 for a month left running.
+
+The rule is unconditional: **create, run the lab, delete the cluster the same day.**
+
+Two levers on the node bill, both chosen before the cluster is created:
+
+- **vCPU count.** Cost scales with total vCPUs across the node pool, so it is node count
+  multiplied by size. Pick the smallest count that runs the lab.
+- **Series.** B-series is burstable and cheaper, suited to intermittent load; D-series is
+  general purpose and steady. Size choice is constrained by quota as well as price, and
+  the three gates a size has to clear are in
+  [`troubleshooting.md`](troubleshooting.md).
+
+The control plane is free on `--tier free`, so nodes are the whole bill. The one usage
+cost to watch is a Service of `type: LoadBalancer`, which provisions a real Azure Load
+Balancer and a public IP, both billable. `ClusterIP` plus `kubectl port-forward` gives the
+same access for a lab at zero cost and leaves nothing behind when the tunnel closes.
 
 ## Pricing accuracy
 
